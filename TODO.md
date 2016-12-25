@@ -1,3 +1,3 @@
 # TODO
 - [x] Basic Structure
-- [ ] Implementig DB
+- [ ] Implement DB
