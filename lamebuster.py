@@ -19,16 +19,20 @@ def handler(bot,update):
     #retriving info from message
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
+    timestamp = update.message.date
     message_num += 1
     
+    
     #debug 
+    #print (timestamp)
     #print (message_num)
     #print (user_id)
     #print (group_name)
     
     if message_num == 5:
         bot.kickChatMember(group_id,user_id)
-        bot.sendMessage(group.id, text "User removed")
+        bot.sendMessage(group_id, text="User removed")
+
         
 
 def error(bot, update, error):
