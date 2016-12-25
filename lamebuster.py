@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-TOKEN=''
+
 from telegram import *
 from telegram.ext import *
 from time import *
 import logging
+import calendar
+import re
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -11,15 +13,18 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 #vars
+TOKEN=''
 message_num=0
+max_messages=5
 
 def handler(bot,update):
     global message_num
+    global max_messages
     
     #retriving info from message
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
-    timestamp = update.message.date
+    timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     message_num += 1
     
     
@@ -29,10 +34,23 @@ def handler(bot,update):
     #print (user_id)
     #print (group_name)
     
-    if message_num == 5:
+    if message_num == max_messages:
         bot.kickChatMember(group_id,user_id)
-        bot.sendMessage(group_id, text="User removed")
+        bot.sendMessage(group_id, text='User removed')
 
+def setctrl(bot,update):
+    global ban_time
+    global max_messages
+    try:
+        messages_time = re.search("\W\d+:\d+$", update.message.text)
+        time = messages_time.group(0).split(':')[0].strip()
+        messages = messages_time.group(0).split(':')[1]
+        text_ = 'Filter set to {0} message(s) in {1} second(s)'.format(messages, time)
+        max_messages = messages #change messages numbers
+        max_time = time #change time
+        bot.sendMessage(update.message.chat_id, text= text_)
+    except AttributeError as e:
+        bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time:messages`',parse_mode='MARKDOWN')
         
 
 def error(bot, update, error):
@@ -50,8 +68,8 @@ def main():
     # on different commands - answer in Telegram
     #dp.add_handler(CommandHandler("start", start))
     #dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("setctrl",setctrl))
     dp.add_handler(MessageHandler(Filters.text, handler))
-    #dp.add_handler(MessageHandler([Filters.photo],photo_handler))
 
     # log all errors
     dp.add_error_handler(error)
