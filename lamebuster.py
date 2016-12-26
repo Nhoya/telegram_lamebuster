@@ -6,6 +6,7 @@ from time import *
 import logging
 import calendar
 import re
+import math
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -14,8 +15,15 @@ logger = logging.getLogger(__name__)
 
 #vars
 TOKEN=''
-message_num=0
-max_messages=5
+max_messages = 5 # messages limit
+max_lease = 3.5 # seconds between successive messages
+pardon = 0.1
+
+group_whitelist = [-192014087]
+db = {}
+
+for g in group_whitelist:
+	db[g] = {}
 
 def _whitelist(bot,update):
     try:
@@ -40,19 +48,53 @@ def handler(bot,update):
     #retriving info from message
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
+    text = update.message.text
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
-    message_num += 1
     
+    if db.get(group_id) == None:
+		# bot is added to a group not in the whitelist
+        bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
+        bot.leaveChat(group_id)
+        return
+    group = db[group_id]
+	
+    if group.get(user_id) == None:
+        group[user_id] = {}
+    user = group[user_id]
+    lease = 0
+	
+    if user.get('counter') == None:
+		#initialization
+        user['counter'] = 0
+        user['old_ts'] = 0
+        user['last_msg'] = ''
+    else:
+		#user already exist
+        lease = timestamp - user['old_ts']
+        if lease <= max_lease:
+            if text == user['last_msg']:
+                user['counter'] += user['counter']+1
+            else:
+                user['counter'] += 1
+        else:
+            if user['counter'] - pardon >= 0:
+                user['counter'] -= pardon
+                
+            else:
+                user['counter'] = 0
+   
+    user['counter'] = round(user['counter'], 2)
     
     #debug 
-    #print (timestamp)
-    #print (message_num)
-    #print (user_id)
-    #print (group_name)
+    print (timestamp, user_id, lease, user['counter'], text == user['last_msg'])
+                 
+    user['old_ts'] = timestamp
+    user['last_msg'] = text
     
-    if message_num == max_messages:
-        bot.kickChatMember(group_id,user_id)
-        bot.sendMessage(group_id, text='User removed')
+    if math.ceil(user['counter']) >= max_messages:
+        #bot.kickChatMember(group_id,user_id)
+        bot.sendMessage(group_id, text='Triggered: User removed ' + str(user_id))
+        user['counter'] = 0
 
 def setctrl(bot,update):
     global ban_time
