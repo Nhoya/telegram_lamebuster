@@ -17,6 +17,22 @@ TOKEN=''
 message_num=0
 max_messages=5
 
+def _whitelist(bot,update):
+    try:
+        group_id = update.message.chat_id
+        user_name = update.message.reply_to_message.from_user.username
+        user_id = update.message.reply_to_message.from_user.id
+        if update.message.text.split(' ')[1] == "add":
+            bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN')
+            #ADD TO WHITELIST
+        elif update.message.text.split(' ')[1] == "remove":
+            bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN')
+            #REMOVE FROM WHITELIST
+        else:
+            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN')
+    except (IndexError, AttributeError) as e:
+            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN')
+
 def handler(bot,update):
     global message_num
     global max_messages
@@ -42,20 +58,27 @@ def setctrl(bot,update):
     global ban_time
     global max_messages
     try:
-        messages_time = re.search("\W\d+:\d+$", update.message.text)
-        time = messages_time.group(0).split(':')[0].strip()
-        messages = messages_time.group(0).split(':')[1]
-        text_ = 'Filter set to {0} message(s) in {1} second(s)'.format(messages, time)
-        max_messages = messages #change messages numbers
+        ctrl_option = re.search("\W\d+$", update.message.text)
+        time = ctrl_option.group(0).strip()
+        text_ = 'Filter set to *{0}* second(s) between messages'.format(time)
         max_time = time #change time
-        bot.sendMessage(update.message.chat_id, text= text_)
+        bot.sendMessage(update.message.chat_id, text= text_, parse_mode='MARKDOWN')
     except AttributeError as e:
-        bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time:messages`',parse_mode='MARKDOWN')
+        bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time`',parse_mode='MARKDOWN')
         
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
-        
+
+
+def setfilter(bot,update):
+    try:
+        target = re.search("\W\D+$", update.message.text).group(1)
+        print (target)
+        bot.sendMessage(update.message.chat_id, text="Filter set to *"+target+"*",parse_mode='MARKDOWN')
+    except AttributeError as e:
+         bot.sendMessage(update.message.chat_id, text='Usage:\n`/filer text | media | all`',parse_mode='MARKDOWN')
+
 
 def main():
     # Create the EventHandler and pass it your bot's token.
@@ -67,10 +90,10 @@ def main():
 
     # on different commands - answer in Telegram
     #dp.add_handler(CommandHandler("start", start))
-    #dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("whitelist", _whitelist))
+    dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
     dp.add_handler(MessageHandler(Filters.text, handler))
-
     # log all errors
     dp.add_error_handler(error)
 
