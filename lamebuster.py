@@ -147,9 +147,16 @@ def setoption(bot,update,option,choices):
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
-def test(bot, update):
+
+def check_bot(bot, update):
+    group_id = update.message.chat_id
     join = update.message.new_chat_member
-    print(join)
+    try:
+        is_bot = re.search("\w*bot$",join.username)
+        bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
+        bot.kickChatMember(group_id, join.id)
+    except (AttributeError, IndexError) as e:
+        print(e)
 
 class TestFilter(BaseFilter):
     def filter(self, message):
@@ -169,7 +176,7 @@ def main():
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
     dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
-    dp.add_handler(MessageHandler(test_filter, test))
+    dp.add_handler(MessageHandler(test_filter, check_bot))
     # log all errors
     dp.add_error_handler(error)
 
