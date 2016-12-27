@@ -8,18 +8,19 @@ import calendar
 import re
 import math
 
+from config import TOKEN
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 #vars
-TOKEN=''
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 
-group_whitelist = [-192014087]
+group_whitelist = [-192014087, -1001084538434]
 db = {}
 for g in group_whitelist:
 	db[g] = {}
@@ -151,12 +152,13 @@ def error(bot, update, error):
 def check_bot(bot, update):
     group_id = update.message.chat_id
     join = update.message.new_chat_member
-    try:
-        is_bot = re.search("\w*bot$",join.username)
-        bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
-        bot.kickChatMember(group_id, join.id)
-    except (AttributeError, IndexError) as e:
-        print(e)
+    if join.id != bot.id:
+        try:
+            is_bot = re.search("\w*bot$",join.username)
+            bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
+            bot.kickChatMember(group_id, join.id)
+        except (AttributeError, IndexError) as e:
+            print(e)
 
 class TestFilter(BaseFilter):
     def filter(self, message):
@@ -171,7 +173,7 @@ def main():
     dp = updater.dispatcher
     test_filter = TestFilter()
     # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("test", test))
+    #dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
