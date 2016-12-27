@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 TOKEN=''
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
-pardon = 0.1
+pardon = 0.2
 
 group_whitelist = [-192014087]
 db = {}
@@ -25,21 +25,28 @@ db = {}
 for g in group_whitelist:
 	db[g] = {}
 
+def _is_admin(bot,update):
+    group_id = update.message.chat_id
+    _role = bot.getChatMember(update.message.chat_id, update.message.from_user.id)
+    if _role.status == "administrator" or _role.status == "creator":
+        return True    
+
 def _whitelist(bot,update):
-    try:
-        group_id = update.message.chat_id
-        user_name = update.message.reply_to_message.from_user.username
-        user_id = update.message.reply_to_message.from_user.id
-        if update.message.text.split(' ')[1] == "add":
-            bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN')
-            #ADD TO WHITELIST
-        elif update.message.text.split(' ')[1] == "remove":
-            bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN')
-            #REMOVE FROM WHITELIST
-        else:
-            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN')
-    except (IndexError, AttributeError) as e:
-            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN')
+    if _is_admin:
+        message_id = update.message.message_id
+        try:
+            user_name = update.message.reply_to_message.from_user.username
+            user_id = update.message.reply_to_message.from_user
+            if update.message.text.split(' ')[1] == "add":
+                bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                #ADD TO WHITELIST
+            elif update.message.text.split(' ')[1] == "remove":
+                bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                #REMOVE FROM WHITELIST
+            else:
+                raise AttributeError
+        except (IndexError, AttributeError) as e:
+            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
 def handler(bot,update):
     global message_num
@@ -86,7 +93,7 @@ def handler(bot,update):
     user['counter'] = round(user['counter'], 2)
     
     #debug 
-    print (timestamp, user_id, lease, user['counter'], text == user['last_msg'])
+    print (timestamp, user_id, text, lease, user['counter'], text == user['last_msg'])
                  
     user['old_ts'] = timestamp
     user['last_msg'] = text
@@ -97,29 +104,43 @@ def handler(bot,update):
         user['counter'] = 0
 
 def setctrl(bot,update):
-    global ban_time
-    global max_messages
-    try:
-        ctrl_option = re.search("\W\d+$", update.message.text)
-        time = ctrl_option.group(0).strip()
-        text_ = 'Filter set to *{0}* second(s) between messages'.format(time)
-        max_time = time #change time
-        bot.sendMessage(update.message.chat_id, text= text_, parse_mode='MARKDOWN')
-    except AttributeError as e:
-        bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time`',parse_mode='MARKDOWN')
-        
+    if _is_admin:
+        global ban_time
+        global max_messages
+        message_id = update.message.message_id
+        try:
+            ctrl_option = re.search("\W\d+$", update.message.text)
+            time = ctrl_option.group(0).strip()
+            text_ = 'Filter set to *{0}* second(s) between messages'.format(time)
+            max_time = time #change time
+            bot.sendMessage(update.message.chat_id, text= text_, parse_mode='MARKDOWN', reply_to_message_id=message_id)
+        except (AttributeError, IndexError) as e:
+            bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
+ 
+def setfilter(bot,update):
+    setoption(bot,update,'filter',['text','media','all'])
+
+
+def setoption(bot,update,option,choices):
+    global db
+    print (message_id)
+    if _is_admin(bot, update):
+        group_id = update.message.chat_id
+        message_id = update.message.message_id
+        try:
+            target = re.search("\/.* (\D+)$", update.message.text).group(1)
+            print (target)
+            #choices e' un array
+            if target in choices:
+                db[group_id][option] = target
+                bot.sendMessage(update.message.chat_id, text=option+" set to *"+target+"*",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+            else:
+                raise AttributeError
+        except (AttributeError, IndexError) as e:
+                bot.sendMessage(update.message.chat_id, text='Usage:\n`/'+option+' '+' | '.join(choices)+'`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
-
-
-def setfilter(bot,update):
-    try:
-        target = re.search("\W\D+$", update.message.text).group(1)
-        print (target)
-        bot.sendMessage(update.message.chat_id, text="Filter set to *"+target+"*",parse_mode='MARKDOWN')
-    except AttributeError as e:
-         bot.sendMessage(update.message.chat_id, text='Usage:\n`/filer text | media | all`',parse_mode='MARKDOWN')
 
 
 def main():
@@ -135,7 +156,7 @@ def main():
     dp.add_handler(CommandHandler("whitelist", _whitelist))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
-    dp.add_handler(MessageHandler(Filters.text, handler))
+    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
     # log all errors
     dp.add_error_handler(error)
 

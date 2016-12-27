@@ -113,3 +113,23 @@ def main():
 if __name__ == '__main__':
     main()
 
+
+
+def setoption(bot,update,option,choices):
+    global db
+    if _is_admin(bot, update):
+        group_id = update.message.chat_id
+        try:
+            target = re.search("\/.* (\D+)$", update.message.text).group(1)
+            print (target)
+            #choices e' un array
+            if target in choices:
+                db[group_id][option] = target
+                bot.sendMessage(update.message.chat_id, text=option+" set to *"+target+"*",parse_mode='MARKDOWN')
+            else:
+                raise AttributeError
+        except (AttributeError, IndexError) as e:
+            choices.join('')
+            bot.sendMessage(update.message.chat_id, text='Usage:\n`/'+option+' text | media | all`',parse_mode='MARKDOWN')
+
+
