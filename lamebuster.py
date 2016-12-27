@@ -14,14 +14,13 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 #vars
-TOKEN='322019565:AAE7B-tshea2CoXjH0AO9wAspTUs5DAZwLg'
+TOKEN=''
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 
 group_whitelist = [-192014087]
 db = {}
-
 for g in group_whitelist:
 	db[g] = {}
 
@@ -55,6 +54,7 @@ def handler(bot,update):
     #retriving info from message
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
+    user_name= update.message.from_user.username
     text = update.message.text
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     
@@ -97,10 +97,17 @@ def handler(bot,update):
                  
     user['old_ts'] = timestamp
     user['last_msg'] = text
-    
+   #BAN MANAGEMENT 
     if math.ceil(user['counter']) >= max_messages:
         #bot.kickChatMember(group_id,user_id)
-        bot.sendMessage(group_id, text='Triggered: User removed ' + str(user_id))
+        banned={'username':user_name,'id':user_id}
+        if db[group_id].get('banlist') == None:
+            db[group_id]['banlist'] = []
+        if banned not in db[group_id]['banlist']:
+            db[group_id]['banlist'].append(banned)
+            bot.sendMessage(group_id, text='Triggered: User removed ' + str(user_id))
+        #debug
+        print(db[group_id]['banlist'])
         user['counter'] = 0
 
 def setctrl(bot,update):
@@ -123,7 +130,6 @@ def setfilter(bot,update):
 
 def setoption(bot,update,option,choices):
     global db
-    print (message_id)
     if _is_admin(bot, update):
         group_id = update.message.chat_id
         message_id = update.message.message_id
@@ -141,7 +147,13 @@ def setoption(bot,update,option,choices):
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
+def test(bot, update):
+    join = update.message.new_chat_member
+    print(join)
 
+class TestFilter(BaseFilter):
+    def filter(self, message):
+        return message.new_chat_member is not None
 
 def main():
     # Create the EventHandler and pass it your bot's token.
@@ -150,13 +162,14 @@ def main():
     # Get the dispatcher to register handlers
     #bot.GetUpdate()
     dp = updater.dispatcher
-
+    test_filter = TestFilter()
     # on different commands - answer in Telegram
-    #dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
     dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
+    dp.add_handler(MessageHandler(test_filter, test))
     # log all errors
     dp.add_error_handler(error)
 
