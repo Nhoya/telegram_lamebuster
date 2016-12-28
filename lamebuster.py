@@ -40,6 +40,7 @@ def _is_admin(bot,update):
         return True    
 
 def _whitelist(bot,update):
+    global db
     group_id = update.message.chat_id
     if _is_admin(bot,update):
         message_id = update.message.message_id
@@ -48,9 +49,6 @@ def _whitelist(bot,update):
             user_id = update.message.reply_to_message.from_user.id
             _user={'username':user_name,'id':user_id}
             if update.message.text.split(' ')[1] == "add":
-                if db[group_id].get('whitelist') == None:
-                    #CREATE WHITELIST
-                    db[group_id]['whitelist'] = []
                 if _user not in db[group_id]['whitelist']:
                     #ADD USER TO WHITELIST
                     db[group_id]['whitelist'].append(_user)
@@ -89,7 +87,11 @@ def handler(bot,update):
     text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
-     
+   
+    if db[group_id].get('whitelist') == None:
+        #CREATE WHITELIST
+        db[group_id]['whitelist'] = []
+         
     if _user in db[group_id]['whitelist']:
         return
 
