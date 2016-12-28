@@ -20,14 +20,17 @@ max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 
-group_whitelist = [-192014087, -1001084538434]
+group_whitelist = [-192014087, -1001084538434 ]
 db = {}
 for g in group_whitelist:
 	db[g] = {}
 
 def _is_group(bot,update):
     chat_info = bot.get_chat(update.message.chat_id)
-    if chat_info.type != "group" or chat_info.type != "supergroup":
+    if chat_info.type == "group" or chat_info.type == "supergroup":
+        print(chat_info.type)
+        return True
+    else:
         return False
 
 def _is_admin(bot,update):
@@ -37,23 +40,43 @@ def _is_admin(bot,update):
         return True    
 
 def _whitelist(bot,update):
+    group_id = update.message.chat_id
     if _is_admin(bot,update):
         message_id = update.message.message_id
         try:
             user_name = update.message.reply_to_message.from_user.username
-            user_id = update.message.reply_to_message.from_user
+            user_id = update.message.reply_to_message.from_user.id
+            _user={'username':user_name,'id':user_id}
             if update.message.text.split(' ')[1] == "add":
-                bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
-                #ADD TO WHITELIST
+                if db[group_id].get('whitelist') == None:
+                    #CREATE WHITELIST
+                    db[group_id]['whitelist'] = []
+                if _user not in db[group_id]['whitelist']:
+                    #ADD USER TO WHITELIST
+                    db[group_id]['whitelist'].append(_user)
+                    bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id) 
+                else:
+                    bot.sendMessage(group_id, text="*"+user_name+"* already in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                print(db[group_id]['whitelist'])
+            
             elif update.message.text.split(' ')[1] == "remove":
-                bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
-                #REMOVE FROM WHITELIST
+                if db[group_id].get('whitelist') == None:
+                     bot.sendMessage(group_id, text="you should create a  whitelist first",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                     return
+                if _user in db[group_id]['whitelist']:
+                    #REMOVE USER FROM WHITELIST
+                    db[group_id]['whitelist'].remove(_user)
+                    print(db[group_id]['whitelist'])
+                    bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                else:
+                    bot.sendMessage(group_id, text="User not in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
             else:
                 raise AttributeError
         except (IndexError, AttributeError) as e:
             bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
 def handler(bot,update):
+    global db
     if _is_group(bot,update) is False:
         return
     global message_num
@@ -65,7 +88,11 @@ def handler(bot,update):
     user_name= update.message.from_user.username
     text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
-    
+    _user = {'username':user_name,'id':user_id}
+     
+    if _user in db[group_id]['whitelist']:
+        return
+
     if db.get(group_id) == None:
 		# bot is added to a group not in the whitelist
         bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
@@ -163,6 +190,13 @@ def check_bot(bot, update):
         if re.search("\w*bot$",join.username) != None:
             bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
             bot.kickChatMember(group_id, join.id)
+    if join.id == bot.id:
+        if db.get(group_id) == None:
+            # bot is added to a group not in the whitelist
+            bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
+            bot.leaveChat(group_id)
+            return
+
 
 class TestFilter(BaseFilter):
     def filter(self, message):
