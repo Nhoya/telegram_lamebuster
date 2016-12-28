@@ -25,6 +25,11 @@ db = {}
 for g in group_whitelist:
 	db[g] = {}
 
+def _is_group(bot,update):
+    chat_info = bot.get_chat(update.message.chat_id)
+    if chat_info.type != "group" or chat_info.type != "supergroup":
+        return False
+
 def _is_admin(bot,update):
     group_id = update.message.chat_id
     _role = bot.getChatMember(update.message.chat_id, update.message.from_user.id)
@@ -32,7 +37,7 @@ def _is_admin(bot,update):
         return True    
 
 def _whitelist(bot,update):
-    if _is_admin:
+    if _is_admin(bot,update):
         message_id = update.message.message_id
         try:
             user_name = update.message.reply_to_message.from_user.username
@@ -49,6 +54,8 @@ def _whitelist(bot,update):
             bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
 def handler(bot,update):
+    if _is_group(bot,update) is False:
+        return
     global message_num
     global max_messages
     
@@ -56,7 +63,7 @@ def handler(bot,update):
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
     user_name= update.message.from_user.username
-    text = update.message.text
+    text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     
     if db.get(group_id) == None:
@@ -112,7 +119,7 @@ def handler(bot,update):
         user['counter'] = 0
 
 def setctrl(bot,update):
-    if _is_admin:
+    if _is_admin(bot,update):
         global ban_time
         global max_messages
         message_id = update.message.message_id
@@ -131,7 +138,7 @@ def setfilter(bot,update):
 
 def setoption(bot,update,option,choices):
     global db
-    if _is_admin(bot, update):
+    if _is_admin(bot,update):
         group_id = update.message.chat_id
         message_id = update.message.message_id
         try:
@@ -153,12 +160,9 @@ def check_bot(bot, update):
     group_id = update.message.chat_id
     join = update.message.new_chat_member
     if join.id != bot.id:
-        try:
-            is_bot = re.search("\w*bot$",join.username)
+        if re.search("\w*bot$",join.username) != None:
             bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
             bot.kickChatMember(group_id, join.id)
-        except (AttributeError, IndexError) as e:
-            print(e)
 
 class TestFilter(BaseFilter):
     def filter(self, message):
@@ -173,7 +177,7 @@ def main():
     dp = updater.dispatcher
     test_filter = TestFilter()
     # on different commands - answer in Telegram
-    #dp.add_handler(CommandHandler("test", test))
+    dp.add_handler(CommandHandler("test", _is_group))
     dp.add_handler(CommandHandler("whitelist", _whitelist))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl))
