@@ -9,6 +9,7 @@ import re
 import math
 
 from config import TOKEN
+from db import bot_db
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
@@ -20,10 +21,9 @@ max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 
-group_whitelist = [-192014087, -1001084538434 ]
-db = {}
-for g in group_whitelist:
-	db[g] = {}
+# Ideally this db should go away and all the DB mention in this file should use the bot_db().db
+# so we don't have a global db but a bot_db class
+db = bot_db().db
 
 def _is_group(bot,update):
     chat_info = bot.get_chat(update.message.chat_id)
@@ -37,7 +37,7 @@ def _is_admin(bot,update):
     group_id = update.message.chat_id
     _role = bot.getChatMember(update.message.chat_id, update.message.from_user.id)
     if _role.status == "administrator" or _role.status == "creator":
-        return True    
+        return True
 
 def _whitelist(bot,update):
     global db
@@ -52,11 +52,11 @@ def _whitelist(bot,update):
                 if _user not in db[group_id]['whitelist']:
                     #ADD USER TO WHITELIST
                     db[group_id]['whitelist'].append(_user)
-                    bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id) 
+                    bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 else:
                     bot.sendMessage(group_id, text="*"+user_name+"* already in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 print(db[group_id]['whitelist'])
-            
+
             elif update.message.text.split(' ')[1] == "remove":
                 if db[group_id].get('whitelist') == None:
                      bot.sendMessage(group_id, text="you should create a  whitelist first",parse_mode='MARKDOWN', reply_to_message_id=message_id)
@@ -79,7 +79,7 @@ def handler(bot,update):
         return
     global message_num
     global max_messages
-    
+
     #retriving info from message
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
@@ -87,11 +87,11 @@ def handler(bot,update):
     text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
-   
+
     if db[group_id].get('whitelist') == None:
         #CREATE WHITELIST
         db[group_id]['whitelist'] = []
-         
+
     if _user in db[group_id]['whitelist']:
         return
 
@@ -101,12 +101,12 @@ def handler(bot,update):
         bot.leaveChat(group_id)
         return
     group = db[group_id]
-	
+
     if group.get(user_id) == None:
         group[user_id] = {}
     user = group[user_id]
     lease = 0
-	
+
     if user.get('counter') == None:
 		#initialization
         user['counter'] = 0
@@ -123,18 +123,18 @@ def handler(bot,update):
         else:
             if user['counter'] - pardon >= 0:
                 user['counter'] -= pardon
-                
+
             else:
                 user['counter'] = 0
-   
+
     user['counter'] = round(user['counter'], 2)
-    
-    #debug 
+
+    #debug
     print (timestamp, user_id, text, lease, user['counter'], text == user['last_msg'])
-                 
+
     user['old_ts'] = timestamp
     user['last_msg'] = text
-   #BAN MANAGEMENT 
+   #BAN MANAGEMENT
     if math.ceil(user['counter']) >= max_messages:
         #bot.kickChatMember(group_id,user_id)
         banned={'username':user_name,'id':user_id}
@@ -160,7 +160,7 @@ def setctrl(bot,update):
             bot.sendMessage(update.message.chat_id, text= text_, parse_mode='MARKDOWN', reply_to_message_id=message_id)
         except (AttributeError, IndexError) as e:
             bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
- 
+
 def setfilter(bot,update):
     setoption(bot,update,'filter',['text','media','all'])
 
@@ -233,4 +233,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
