@@ -1,7 +1,6 @@
 def _is_group(bot,update):
     chat_info = bot.get_chat(update.message.chat_id)
     if chat_info.type == "group" or chat_info.type == "supergroup":
-        print(chat_info.type)
         return True
     else:
         return False
