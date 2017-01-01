@@ -10,7 +10,7 @@ import math
 
 from config import TOKEN
 from db import bot_db
-
+from checks import _is_group _is_admin
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -24,20 +24,6 @@ pardon = 0.2
 # Ideally this db should go away and all the DB mention in this file should use the bot_db().db
 # so we don't have a global db but a bot_db class
 db = bot_db().db
-
-def _is_group(bot,update):
-    chat_info = bot.get_chat(update.message.chat_id)
-    if chat_info.type == "group" or chat_info.type == "supergroup":
-        print(chat_info.type)
-        return True
-    else:
-        return False
-
-def _is_admin(bot,update):
-    group_id = update.message.chat_id
-    _role = bot.getChatMember(update.message.chat_id, update.message.from_user.id)
-    if _role.status == "administrator" or _role.status == "creator":
-        return True
 
 def _whitelist(bot,update):
     global db
