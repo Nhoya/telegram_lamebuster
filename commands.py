@@ -1,10 +1,9 @@
 import re
 from controls import _is_admin
-from db import bot_db
 
-db = bot_db().db
-
-def setctrl(bot,update):
+def setctrl(bot,update,args):
+    print(args[0])
+    return
     if _is_admin(bot,update):
         global ban_time
         global max_messages
@@ -18,8 +17,8 @@ def setctrl(bot,update):
         except (AttributeError, IndexError) as e:
             bot.sendMessage(update.message.chat_id, text='Usage:\n`/setctrl time`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
-def setoption(bot,update,option,choices):
-    global db
+def setoption(bot,update,option,choices,bot_db):
+#    global db
     if _is_admin(bot,update):
         group_id = update.message.chat_id
         message_id = update.message.message_id
@@ -35,26 +34,39 @@ def setoption(bot,update,option,choices):
         except (AttributeError, IndexError) as e:
                 bot.sendMessage(update.message.chat_id, text='Usage:\n`/'+option+' '+' | '.join(choices)+'`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
-def _whitelist(bot,update):
-    global db
+def whitelist(bot,update,args,db):
+#    global db
     group_id = update.message.chat_id
     if _is_admin(bot,update):
+        if db[group_id].get('whitelist') == None:
+            #CREATE WHITELIST
+            db[group_id]['whitelist'] = []
         message_id = update.message.message_id
-        user_name = update.message.reply_to_message.from_user.username
-        user_id = update.message.reply_to_message.from_user.id
-        _user={'username':user_name,'id':user_id}
-            if update.message.text.split(' ')[1] == "add":
+        if args[0] == "show":
+            whitelist_users = ""
+            for elements in db[group_id]['whitelist']:
+                whitelist_users =whitelist_users+"\n"+elements['username']
+                if whitelist_users:
+                    bot.sendMessage(group_id,text="Whitelist:*"+whitelist_users+"*" ,parse_mode='MARKDOWN')
+                else:
+                    bot.sendMessage(group_id,text="Whitelist is empty")
+                return
+        try:
+            user_name = update.message.reply_to_message.from_user.username
+            user_id = update.message.reply_to_message.from_user.id
+            _user={'username':user_name,'id':user_id}       
+            if args[0] == "add":
                 if _user not in db[group_id]['whitelist']:
-                    #ADD USER TO WHITELIST
+                #ADD USER TO WHITELIST
                     db[group_id]['whitelist'].append(_user)
                     bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 else:
                     bot.sendMessage(group_id, text="*"+user_name+"* already in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 print(db[group_id]['whitelist'])
-            elif update.message.text.split(' ')[1] == "remove":
+            elif args[0] == "remove":
                 if db[group_id].get('whitelist') == None:
-                     bot.sendMessage(group_id, text="you should create a  whitelist first",parse_mode='MARKDOWN', reply_to_message_id=message_id)
-                     return
+                    bot.sendMessage(group_id, text="you should create a  whitelist first",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+                    return
                 if _user in db[group_id]['whitelist']:
                     #REMOVE USER FROM WHITELIST
                     db[group_id]['whitelist'].remove(_user)
@@ -62,12 +74,8 @@ def _whitelist(bot,update):
                     bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 else:
                     bot.sendMessage(group_id, text="User not in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
-            elif update.message.text.split(' ')[1] == "":
-                print (print(db[group_id]['whitelist']))
             else:
                 raise AttributeError
-        except AttributeError as e:
-            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
-        except IndexError as e:
-             print(db[group_id]['whitelist'])
+        except (AttributeError, IndexError) as e:
+            bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove| show`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
