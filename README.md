@@ -3,7 +3,7 @@
 __**Actually this is a W.I.P. read the [TODO list](/TODO.md) for more info**__
 
 
-A simple python bot to get rid of annoying flooders in grpups
+A simple python bot to get rid of annoying flooders
 
 ## Overview
 
