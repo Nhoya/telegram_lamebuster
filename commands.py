@@ -42,16 +42,16 @@ def whitelist(bot,update,args,db):
             #CREATE WHITELIST
             db[group_id]['whitelist'] = []
         message_id = update.message.message_id
-        if args[0] == "show":
-            whitelist_users = ""
-            for elements in db[group_id]['whitelist']:
-                whitelist_users =whitelist_users+"\n"+elements['username']
+        try:
+            if args[0] == "show":
+                whitelist_users = ""
+                for elements in db[group_id]['whitelist']:
+                    whitelist_users =whitelist_users+"\n"+elements['username']
                 if whitelist_users:
                     bot.sendMessage(group_id,text="Whitelist:*"+whitelist_users+"*" ,parse_mode='MARKDOWN')
                 else:
                     bot.sendMessage(group_id,text="Whitelist is empty")
                 return
-        try:
             user_name = update.message.reply_to_message.from_user.username
             user_id = update.message.reply_to_message.from_user.id
             _user={'username':user_name,'id':user_id}       
@@ -77,5 +77,6 @@ def whitelist(bot,update,args,db):
             else:
                 raise AttributeError
         except (AttributeError, IndexError) as e:
+            print(e)
             bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove| show`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
