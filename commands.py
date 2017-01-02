@@ -57,7 +57,7 @@ def whitelist(bot,update,args,db):
             _user={'username':user_name,'id':user_id}       
             if args[0] == "add":
                 if _user not in db[group_id]['whitelist']:
-                #ADD USER TO WHITELIST
+                    #ADD USER TO WHITELIST
                     db[group_id]['whitelist'].append(_user)
                     bot.sendMessage(group_id, text="*"+user_name+"* added to whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 else:
@@ -74,6 +74,8 @@ def whitelist(bot,update,args,db):
                     bot.sendMessage(group_id, text="*"+user_name+"* removed from whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
                 else:
                     bot.sendMessage(group_id, text="User not in whitelist",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+            elif update.message.text.split(' ')[1] == "":
+                print (print(db[group_id]['whitelist']))
             else:
                 raise AttributeError
         except (AttributeError, IndexError) as e:
