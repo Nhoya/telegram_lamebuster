@@ -11,7 +11,7 @@ import math
 from config import TOKEN
 from db import bot_db
 from controls import _is_group, _is_admin
-from commands import setctrl, _whitelist
+from commands import setctrl, whitelist
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -105,6 +105,10 @@ def handler(bot,update):
 def setfilter(bot,update):
     setoption(bot,update,'filter',['text','media','all'])
 
+def _whitelist(bot,update,args):
+    global db
+    whitelist(bot,update,args,db)
+
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
@@ -112,17 +116,23 @@ def error(bot, update, error):
 def check_bot(bot, update):
     group_id = update.message.chat_id
     join = update.message.new_chat_member
+    _user = {'username':join.username,'id':join.id}
+    print (_user)
     if join.id != bot.id:
         if re.search("\w*bot$",join.username) != None:
             bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
             bot.kickChatMember(group_id, join.id)
+            return
+        elif _user in db[group_id]['banlist']:
+            bot.sendMessage(group_id, text='User in blacklist')
+           # bot.kickChatMember(group_id, join.id)
+            return
     if join.id == bot.id:
         if db.get(group_id) == None:
             # bot is added to a group not in the whitelist
             bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
             bot.leaveChat(group_id)
             return
-
 
 class TestFilter(BaseFilter):
     def filter(self, message):
@@ -138,9 +148,9 @@ def main():
     test_filter = TestFilter()
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("test", _is_group))
-    dp.add_handler(CommandHandler("whitelist", _whitelist))
+    dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
     dp.add_handler(CommandHandler("setfilter",setfilter))
-    dp.add_handler(CommandHandler("setctrl",setctrl))
+    dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
     dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
     dp.add_handler(MessageHandler(test_filter, check_bot))
     # log all errors
