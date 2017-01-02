@@ -23,7 +23,6 @@ max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 
 bot_db = bot_database()
-db = bot_db.db
 
 def handler(bot,update):
     if _is_group(bot,update) is False:
@@ -85,9 +84,7 @@ def setfilter(bot,update):
     setoption(bot,update,'filter',['text','media','all'])
 
 def _whitelist(bot,update,args):
-    global db
-    whitelist(bot,update,args,db)
-
+    whitelist(bot,update,args,bot_db)
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
@@ -99,12 +96,13 @@ def check_bot(bot, update):
     print (_user)
     if join.id != bot.id:
         if re.search("\w*bot$",join.username) != None:
+            # TODO: Check if the bot is in whitelist!!
             bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
             bot.kickChatMember(group_id, join.id)
             return
-        elif _user in db[group_id]['banlist']:
+        elif _user in bot_db.getGroupBanlist(group_id):
             bot.sendMessage(group_id, text='User in blacklist')
-           # bot.kickChatMember(group_id, join.id)
+            bot.kickChatMember(group_id, join.id)
             return
     if join.id == bot.id:
         try:
