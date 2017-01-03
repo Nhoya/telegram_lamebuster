@@ -51,7 +51,7 @@ def handler(bot,update):
     user = bot_db.getUser(group_id,user_id)
 
     if re.search("([\n])\\1\\1\\1+",text.decode('utf-8')) != None:
-        user['counter'] == 4.1
+        user['counter'] += 5
 
     lease = timestamp - user['old_ts']
     if lease <= max_lease:
@@ -62,7 +62,6 @@ def handler(bot,update):
     else:
         if user['counter'] - pardon >= 0:
             user['counter'] -= pardon
-
         else:
             user['counter'] = 0
 
