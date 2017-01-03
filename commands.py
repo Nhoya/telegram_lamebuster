@@ -83,7 +83,70 @@ def whitelist(bot,update,args,bot_db):
         except (AttributeError, IndexError) as e:
             print(e)
             bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove| show`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+
+def unban(bot,update,bot_db):
+    try:
+        group_id = update.message.chat_id
+        if _is_admin(bot,update):
+            message_body = update.message
+            message_reply = message_body.reply_to_message
+            user_name = message_reply.from_user.username
+            user_id = message_reply.from_user.id
+            user = bot_db.getUser(group_id,user_id)
+            _user={'username':user_name,'id':user_id}
+            if _user in bot_db.getGroupBanlist(group_id):
+                bot_db.removeBanned(group_id,_user)
+                user['counter'] = 0
+                bot.sendMessage(group_id,text="*"+user_name+"* Unbanned",parse_mode='MARKDOWN')
+            else:
+                bot.sendMessage(group_id,text="*"+user_name+"* Not in blacklist",parse_mode='MARKDOWN')
+    except AttributeError:
+        bot.sendMessage(group_id,text="If you are trying to unban a bot try `/whitelist add` on the bot's join message [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+
+def banlist(bot,update,bot_db):
+    if _is_admin(bot,update):
+        group_id = update.message.chat_id
+        banlist_users = ""
+        banlist = bot_db.getGroupBanlist(group_id)
+        print(banlist)
+        for elements in banlist:
+            banlist_users = banlist_users+"\n"+elements['username']
+        if banlist_users:
+            bot.sendMessage(group_id,text="Banlist:*"+banlist_users+"*" ,parse_mode='MARKDOWN')
+        else:
+            bot.sendMessage(group_id,text="Banlist is empty")
+
+def ban(bot,update,bot_db):
+    if _is_admin(bot,update):
+        try:
+            group_id = update.message.chat_id
+            message_body = update.message
+            message_reply = message_body.reply_to_message
+            whitelist = bot_db.getGroupWhitelist(group_id)
+            banlist = bot_db.getGroupBanlist(group_id)
+            message_id = message_body.message_id
+            user_name = message_reply.from_user.username
+            user_id = message_reply.from_user.id
+            _role = bot.getChatMember(update.message.chat_id, message_reply.from_user.id)
+            if _role.status == "administrator" or _role.status == "creator":
+                bot.sendMessage(group_id,text="*You can't ban other admins stupid moron*",parse_mode='MARKDOWN')
+                return
+            _user={'username':user_name,'id':user_id}
+            if _user not in banlist:
+                bot_db.addBanned(group_id,_user)
+                bot.sendMessage(group_id,text="*"+user_name+"* banned",parse_mode='MARKDOWN')
+                if _user in whitelist:
+                    bot_db.removeFromWhitelist(group_id,_user)
+                    bot.sendMessage(group_id,text="*"+user_name+"* removed from whtelist",parse_mode='MARKDOWN')
+            else:
+                bot.sendMessage(group_id,text="*"+user_name+"* already in banlist",parse_mode='MARKDOWN')
+        except AttributeError:
+            bot.sendMessage(group_id,text="*You can't ban bots* [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+
+
 #JUST FOR FUN
 def pong(bot, update):
     bot.sendMessage(update.message.chat_id, text="pong")
+
+
 

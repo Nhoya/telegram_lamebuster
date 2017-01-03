@@ -11,7 +11,7 @@ import math
 from config import TOKEN
 from db import bot_database, GroupException, UserException
 from controls import _is_group, _is_admin, check_join
-from commands import setctrl, whitelist, pong
+from commands import setctrl, whitelist, pong, unban, banlist, ban
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -25,7 +25,9 @@ filtro = Filters.text
 bot_db = bot_database()
 
 def handler(bot,update):
-    if _is_group(bot,update) is False:
+    if _is_admin(bot,update):
+        return
+    if not _is_group(bot,update):
         return
     global message_num
     global max_messages
@@ -91,12 +93,24 @@ def _whitelist(bot,update,args):
 def _check_join(bot,update):
     check_join(bot,update,bot_db)
 
+def _banlist(bot,update):
+    banlist(bot,update,bot_db)
+
+def _unban(bot,update):
+    unban(bot,update,bot_db)
+
+def _ban(bot,update):
+    ban(bot,update,bot_db)
+
+
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 class OnjoinFilter(BaseFilter):
     def filter(self, message):
         return message.new_chat_member is not None
+
+
 def test(bot,update):
     text= update.message.reply_to_message.new_chat_member
     print(text)
@@ -114,6 +128,9 @@ def main():
     dp.add_handler(CommandHandler("ping", pong))
     #dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
+    dp.add_handler(CommandHandler("banlist", _banlist))
+    dp.add_handler(CommandHandler("unban", _unban))
+    dp.add_handler(CommandHandler("ban", _ban))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
     dp.add_handler(MessageHandler(filtro, handler))

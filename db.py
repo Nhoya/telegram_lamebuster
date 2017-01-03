@@ -83,7 +83,7 @@ class bot_database:
     def removeBanned(self, group_id, banned):
         gb = self.getGroupBanlist(group_id)
         if banned['username'] and banned['id']:
-            gb.append(banned)
+            gb.remove(banned)
             self.commit()
         else:
             raise GroupException("Banned object malformed")
