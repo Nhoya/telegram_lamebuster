@@ -47,12 +47,11 @@ def handler(bot,update):
 
     if _user in whitelist:
         return
-    
+
     user = bot_db.getUser(group_id,user_id)
-    
+
     if re.search("([\n])\\1\\1\\1+",text.decode('utf-8')) != None:
         user['counter'] == 4.1
-
 
     lease = timestamp - user['old_ts']
     if lease <= max_lease:
@@ -114,6 +113,7 @@ def main():
     OnJoin_filter = OnjoinFilter()
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("ping", pong))
+    #dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
