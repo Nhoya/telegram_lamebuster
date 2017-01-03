@@ -33,11 +33,14 @@ def setoption(bot,update,option,choices,bot_db):
         except (AttributeError, IndexError) as e:
                 bot.sendMessage(update.message.chat_id, text='Usage:\n`/'+option+' '+' | '.join(choices)+'`',parse_mode='MARKDOWN', reply_to_message_id=message_id)
 
+#WHITELIST COMMAND [SHOW | ADD | REMOVE]
 def whitelist(bot,update,args,bot_db):
     group_id = update.message.chat_id
     if _is_admin(bot,update):
+        message_body = update.message
+        message_reply = message_body.reply_to_message
         whitelist = bot_db.getGroupWhitelist(group_id)
-        message_id = update.message.message_id
+        message_id = message_body.message_id
         try:
             if args[0] == "show":
                 whitelist_users = ""
@@ -48,9 +51,17 @@ def whitelist(bot,update,args,bot_db):
                 else:
                     bot.sendMessage(group_id,text="Whitelist is empty")
                 return
-            user_name = update.message.reply_to_message.from_user.username
-            user_id = update.message.reply_to_message.from_user.id
+            user_name = message_reply.from_user.username
+            user_id = message_reply.from_user.id
             _user={'username':user_name,'id':user_id}
+            if message_reply.new_chat_member is not None:
+                user_name = message_reply.new_chat_member.username
+                user_id = message_reply.new_chat_member.id
+                if re.search("\w*bot$",user_name) != None:
+                    _user={'username':user_name,'id':user_id}
+                else:
+                    bot.sendMessage(group_id,text="Only bots can be whitelisted in this way")
+                    return
             if args[0] == "add":
                 if _user not in whitelist:
                     #ADD USER TO WHITELIST
@@ -72,3 +83,7 @@ def whitelist(bot,update,args,bot_db):
         except (AttributeError, IndexError) as e:
             print(e)
             bot.sendMessage(group_id, text="Usage:\n `/whitelist add |remove| show`",parse_mode='MARKDOWN', reply_to_message_id=message_id)
+#JUST FOR FUN
+def pong(bot, update):
+    bot.sendMessage(update.message.chat_id, text="pong")
+

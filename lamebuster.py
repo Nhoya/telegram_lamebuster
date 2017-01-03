@@ -10,8 +10,8 @@ import math
 
 from config import TOKEN
 from db import bot_database, GroupException, UserException
-from controls import _is_group, _is_admin
-from commands import setctrl, whitelist
+from controls import _is_group, _is_admin, check_join
+from commands import setctrl, whitelist, pong
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -86,39 +86,19 @@ def setfilter(bot,update):
 def _whitelist(bot,update,args):
     whitelist(bot,update,args,bot_db)
 
+def _check_join(bot,update):
+    check_join(bot,update,bot_db)
+
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
-def check_bot(bot, update):
-    group_id = update.message.chat_id
-    join = update.message.new_chat_member
-    _user = {'username':join.username,'id':join.id}
-    print (_user)
-    if join.id != bot.id:
-        if re.search("\w*bot$",join.username) != None:
-            # TODO: Check if the bot is in whitelist!!
-            bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
-            bot.kickChatMember(group_id, join.id)
-            return
-        elif _user in bot_db.getGroupBanlist(group_id):
-            bot.sendMessage(group_id, text='User in blacklist')
-            bot.kickChatMember(group_id, join.id)
-            return
-    if join.id == bot.id:
-        try:
-            bot_db.getGroup(group_id)
-        except GroupException as e:
-            # bot is added to a group not in the whitelist
-            bot.sendMessage(group_id, text=str(e) + " " + str(group_id))
-            bot.leaveChat(group_id)
-            return
-
-def pong(bot, update):
-    bot.sendMessage(update.message.chat_id, text="pong")
-
-class TestFilter(BaseFilter):
+class OnjoinFilter(BaseFilter):
     def filter(self, message):
         return message.new_chat_member is not None
+def test(bot,update):
+    text= update.message.reply_to_message.new_chat_member
+    print(text)
+
 
 def main():
     # Create the EventHandler and pass it your bot's token.
@@ -127,15 +107,14 @@ def main():
     # Get the dispatcher to register handlers
     #bot.GetUpdate()
     dp = updater.dispatcher
-    test_filter = TestFilter()
+    OnJoin_filter = OnjoinFilter()
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("ping", pong))
-    #dp.add_handler(CommandHandler("test", _is_group))
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
     dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
-    dp.add_handler(MessageHandler(test_filter, check_bot))
+    dp.add_handler(MessageHandler(OnJoin_filter, _check_join))
     # log all errors
     dp.add_error_handler(error)
 
