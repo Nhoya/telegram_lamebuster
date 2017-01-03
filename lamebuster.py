@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
-
+filtro = Filters.text
 bot_db = bot_database()
 
 def handler(bot,update):
@@ -47,8 +47,12 @@ def handler(bot,update):
 
     if _user in whitelist:
         return
-
+    
     user = bot_db.getUser(group_id,user_id)
+    
+    if re.search("([\n])\\1\\1\\1+",text.decode('utf-8')) != None:
+        user['counter'] == 4.1
+
 
     lease = timestamp - user['old_ts']
     if lease <= max_lease:
@@ -113,7 +117,7 @@ def main():
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
-    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
+    dp.add_handler(MessageHandler(filtro, handler))
     dp.add_handler(MessageHandler(OnJoin_filter, _check_join))
     # log all errors
     dp.add_error_handler(error)
