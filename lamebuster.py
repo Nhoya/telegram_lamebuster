@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
-filtro = Filters.text
 bot_db = bot_database()
 
 def handler(bot,update):
@@ -52,7 +51,7 @@ def handler(bot,update):
 
     user = bot_db.getUser(group_id,user_id)
 
-    if re.search("([\n])\\1\\1\\1+",text.decode('utf-8')) != None:
+    if re.search("(.{0,5}\n){4,}",text.decode('utf-8')) != None:
         user['counter'] += 5
 
     lease = timestamp - user['old_ts']
@@ -81,7 +80,8 @@ def handler(bot,update):
         banned={'username':user_name,'id':user_id}
         if banned not in bot_db.getGroupBanlist(group_id):
             bot_db.addBanned(group_id,banned)
-            bot.sendMessage(group_id, text='Triggered: User removed ' + str(user_id))
+            bot.sendMessage(group_id, text='User removed ' + str(user_id) +" "+ user_name)
+        bot.kickChatMember(group_id,user_id)
         user['counter'] = 0
 
 def setfilter(bot,update):
@@ -133,7 +133,7 @@ def main():
     dp.add_handler(CommandHandler("ban", _ban))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
-    dp.add_handler(MessageHandler(filtro, handler))
+    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo |Filters.video |Filters.document), handler))
     dp.add_handler(MessageHandler(OnJoin_filter, _check_join))
     # log all errors
     dp.add_error_handler(error)

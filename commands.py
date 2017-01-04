@@ -101,7 +101,9 @@ def unban(bot,update,bot_db):
             else:
                 bot.sendMessage(group_id,text="*"+user_name+"* Not in blacklist",parse_mode='MARKDOWN')
     except AttributeError:
-        bot.sendMessage(group_id,text="If you are trying to unban a bot try `/whitelist add` on the bot's join message [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+        bot.sendMessage(group_id,text="Usage:\n `/unban quoting a message from the user you want to ban.`\n\nRemember:\n *you can't unban bots in that way* [Find Out     why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+
+        
 
 def banlist(bot,update,bot_db):
     if _is_admin(bot,update):
@@ -141,7 +143,7 @@ def ban(bot,update,bot_db):
             else:
                 bot.sendMessage(group_id,text="*"+user_name+"* already in banlist",parse_mode='MARKDOWN')
         except AttributeError:
-            bot.sendMessage(group_id,text="*You can't ban bots* [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+            bot.sendMessage(group_id,text="Usage:\n `/ban quoting a message from the user you want to ban.`\n\nRemember:\n *you can't ban bots in that way* [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
 
 
 #JUST FOR FUN

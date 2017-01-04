@@ -20,7 +20,7 @@ def check_join(bot, update, bot_db):
     _user = {'username':join.username,'id':join.id}
     print (_user)
     if join.id != bot.id:
-        if re.search("\w*bot$",join.username) != None:
+        if re.search("\w*bot$",join.username,re.IGNORECASE) != None:
             if _user in bot_db.getGroupWhitelist(group_id):
                 return
             bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
