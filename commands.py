@@ -136,6 +136,7 @@ def ban(bot,update,bot_db):
             _user={'username':user_name,'id':user_id}
             if _user not in banlist:
                 bot_db.addBanned(group_id,_user)
+                bot.kickChatMember(group_id, user_id)
                 bot.sendMessage(group_id,text="*"+user_name+"* banned",parse_mode='MARKDOWN')
                 if _user in whitelist:
                     bot_db.removeFromWhitelist(group_id,_user)

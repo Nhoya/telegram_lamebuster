@@ -39,6 +39,9 @@ def handler(bot,update):
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
 
+    if _user in bot_db.getGroupBanlist(group_id):
+        bot.kickChatMember(group_id,user_id)
+        return
     try:
         whitelist = bot_db.getGroupWhitelist(group_id)
     except GroupException as e:
