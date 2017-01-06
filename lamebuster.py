@@ -136,7 +136,7 @@ def main():
     dp.add_handler(CommandHandler("ban", _ban))
     dp.add_handler(CommandHandler("setfilter",setfilter))
     dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
-    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo |Filters.video |Filters.document), handler))
+    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo |Filters.video |Filters.document |Filters.audio |Filters.voice), handler))
     dp.add_handler(MessageHandler(OnJoin_filter, _check_join))
     # log all errors
     dp.add_error_handler(error)
