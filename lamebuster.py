@@ -9,9 +9,9 @@ import re
 import math
 
 from config import TOKEN
-from db import bot_db
-from controls import _is_group, _is_admin
-from commands import setctrl, _whitelist
+from db import bot_database, GroupException, UserException
+from controls import _is_group, _is_admin, check_join
+from commands import setctrl, whitelist, pong, unban, banlist, ban
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -21,15 +21,12 @@ logger = logging.getLogger(__name__)
 max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
-
-# Ideally this db should go away and all the DB mention in this file should use the bot_db().db
-# so we don't have a global db but a bot_db class
-db = bot_db().db
-
+bot_db = bot_database()
 
 def handler(bot,update):
-    global db
-    if _is_group(bot,update) is False:
+    if _is_admin(bot,update):
+        return
+    if not _is_group(bot,update):
         return
     global message_num
     global max_messages
@@ -42,91 +39,85 @@ def handler(bot,update):
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
 
-    if db.get(group_id) == None:
-        # bot is added to a group not in the whitelist
-        bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
+    if _user in bot_db.getGroupBanlist(group_id):
+        bot.kickChatMember(group_id,user_id)
+        return
+    try:
+        whitelist = bot_db.getGroupWhitelist(group_id)
+    except GroupException as e:
+        bot.sendMessage(group_id, text=str(e) + " " + str(group_id))
         bot.leaveChat(group_id)
         return
-    group = db[group_id]
 
-    
-    if db[group_id].get('whitelist') == None:
-        #CREATE WHITELIST
-        db[group_id]['whitelist'] = []
-
-    if _user in db[group_id]['whitelist']:
+    if _user in whitelist:
         return
 
-    if group.get(user_id) == None:
-        group[user_id] = {}
-    user = group[user_id]
-    lease = 0
+    user = bot_db.getUser(group_id,user_id)
 
-    if user.get('counter') == None:
-		#initialization
-        user['counter'] = 0
-        user['old_ts'] = 0
-        user['last_msg'] = ''
-    else:
-		#user already exist
-        lease = timestamp - user['old_ts']
-        if lease <= max_lease:
-            if text == user['last_msg']:
-                user['counter'] += user['counter']+1
-            else:
-                user['counter'] += 1
+    if re.search("(.{0,5}\n){4,}",text.decode('utf-8')) != None:
+        user['counter'] += 5
+
+    lease = timestamp - user['old_ts']
+    if lease <= max_lease:
+        if text == user['last_msg']:
+            user['counter'] += user['counter']+1
         else:
-            if user['counter'] - pardon >= 0:
-                user['counter'] -= pardon
-
-            else:
-                user['counter'] = 0
+            user['counter'] += 1
+    else:
+        if user['counter'] - pardon >= 0:
+            user['counter'] -= pardon
+        else:
+            user['counter'] = 0
 
     user['counter'] = round(user['counter'], 2)
 
     #debug
-    print (timestamp, user_id, text, lease, user['counter'], text == user['last_msg'])
+    print (timestamp, group_id, user_id, text, user['counter'])
 
     user['old_ts'] = timestamp
     user['last_msg'] = text
-   #BAN MANAGEMENT
+
+    #BAN MANAGEMENT
     if math.ceil(user['counter']) >= max_messages:
         #bot.kickChatMember(group_id,user_id)
         banned={'username':user_name,'id':user_id}
-        if db[group_id].get('banlist') == None:
-            db[group_id]['banlist'] = []
-        if banned not in db[group_id]['banlist']:
-            db[group_id]['banlist'].append(banned)
-            bot.sendMessage(group_id, text='Triggered: User removed ' + str(user_id))
-        #debug
-        print(db[group_id]['banlist'])
+        if banned not in bot_db.getGroupBanlist(group_id):
+            bot_db.addBanned(group_id,banned)
+            bot.sendMessage(group_id, text='User removed ' + str(user_id) +" "+ user_name)
+        bot.kickChatMember(group_id,user_id)
         user['counter'] = 0
 
 def setfilter(bot,update):
     setoption(bot,update,'filter',['text','media','all'])
 
+def _whitelist(bot,update,args):
+    whitelist(bot,update,args,bot_db)
+
+def _check_join(bot,update):
+    check_join(bot,update,bot_db)
+
+def _banlist(bot,update):
+    banlist(bot,update,bot_db)
+
+def _unban(bot,update):
+    unban(bot,update,bot_db)
+
+def _ban(bot,update):
+    ban(bot,update,bot_db)
+
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
-def check_bot(bot, update):
-    group_id = update.message.chat_id
-    join = update.message.new_chat_member
-    if join.id != bot.id:
-        if re.search("\w*bot$",join.username) != None:
-            bot.sendMessage(update.message.chat_id, text="Bot not in whitelist")
-            bot.kickChatMember(group_id, join.id)
-    if join.id == bot.id:
-        if db.get(group_id) == None:
-            # bot is added to a group not in the whitelist
-            bot.sendMessage(group_id, text='Group not in whitelist ' + str(group_id))
-            bot.leaveChat(group_id)
-            return
-
-
-class TestFilter(BaseFilter):
+class OnjoinFilter(BaseFilter):
     def filter(self, message):
         return message.new_chat_member is not None
+
+
+def test(bot,update):
+    text= update.message.reply_to_message.new_chat_member
+    print(text)
+
 
 def main():
     # Create the EventHandler and pass it your bot's token.
@@ -135,14 +126,18 @@ def main():
     # Get the dispatcher to register handlers
     #bot.GetUpdate()
     dp = updater.dispatcher
-    test_filter = TestFilter()
+    OnJoin_filter = OnjoinFilter()
     # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("test", _is_group))
-    dp.add_handler(CommandHandler("whitelist", _whitelist))
+    dp.add_handler(CommandHandler("ping", pong))
+    #dp.add_handler(CommandHandler("test", test))
+    dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
+    dp.add_handler(CommandHandler("banlist", _banlist))
+    dp.add_handler(CommandHandler("unban", _unban))
+    dp.add_handler(CommandHandler("ban", _ban))
     dp.add_handler(CommandHandler("setfilter",setfilter))
-    dp.add_handler(CommandHandler("setctrl",setctrl))
-    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo), handler))
-    dp.add_handler(MessageHandler(test_filter, check_bot))
+    dp.add_handler(CommandHandler("setctrl",setctrl, pass_args=True))
+    dp.add_handler(MessageHandler((Filters.text | Filters.sticker | Filters.command | Filters.photo |Filters.video |Filters.document |Filters.audio |Filters.voice), handler))
+    dp.add_handler(MessageHandler(OnJoin_filter, _check_join))
     # log all errors
     dp.add_error_handler(error)
 
