@@ -1,6 +1,6 @@
 import re
 from controls import _is_admin
-
+from telegram.error import  *
 def setctrl(bot,update,args):
     print(args[0])
     return
@@ -118,7 +118,7 @@ def banlist(bot,update,bot_db):
         else:
             bot.sendMessage(group_id,text="Banlist is empty")
 
-def ban(bot,update,bot_db):
+def ban(bot,update,bot_db, error):
     if _is_admin(bot,update):
         try:
             group_id = update.message.chat_id
@@ -143,8 +143,10 @@ def ban(bot,update,bot_db):
                     bot.sendMessage(group_id,text="*"+user_name+"* removed from whtelist",parse_mode='MARKDOWN')
             else:
                 bot.sendMessage(group_id,text="*"+user_name+"* already in banlist",parse_mode='MARKDOWN')
-        except AttributeError:
+        except AttributeError as e:
             bot.sendMessage(group_id,text="Usage:\n `/ban quoting a message from the user you want to ban.`\n\nRemember:\n *you can't ban bots in that way* [Find Out why](https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots)",parse_mode='MARKDOWN')
+        except (TelegramError, BadRequest) as e:
+            bot.sendMessage(group_id, text="I need Administrator rights")
 
 
 #JUST FOR FUN
