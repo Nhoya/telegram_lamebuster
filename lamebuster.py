@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
 from telegram import *
+import telegram
 from telegram.ext import *
+from telegram.bot import *
 from time import *
+from telegram.error import *
 import logging
 import calendar
 import re
 import math
+import sys
 
 from config import TOKEN
 from db import bot_database, GroupException, UserException
@@ -38,11 +42,14 @@ def handler(bot,update):
     text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
-
-    if _user in bot_db.getGroupBanlist(group_id):
-        bot.kickChatMember(group_id,user_id)
-        return
     try:
+        if _user in bot_db.getGroupBanlist(group_id):
+            try:
+                bot.kickChatMember(group_id,user_id)
+                return
+            except(TelegramError, BadRequest) as e:
+                bot.sendMessage(group_id, text="I need Administrator rights")
+                return
         whitelist = bot_db.getGroupWhitelist(group_id)
     except GroupException as e:
         bot.sendMessage(group_id, text=str(e) + " " + str(group_id))
@@ -84,8 +91,12 @@ def handler(bot,update):
         if banned not in bot_db.getGroupBanlist(group_id):
             bot_db.addBanned(group_id,banned)
             bot.sendMessage(group_id, text='User removed ' + str(user_id) +" "+ user_name)
-        bot.kickChatMember(group_id,user_id)
-        user['counter'] = 0
+        try:
+            bot.kickChatMember(group_id,user_id)
+            user['counter'] = 0
+        except (TelegramError, BadRequest) as e:
+             bot.sendMessage(group_id, text="I need Administrator rights")
+
 
 def setfilter(bot,update):
     setoption(bot,update,'filter',['text','media','all'])
@@ -103,7 +114,7 @@ def _unban(bot,update):
     unban(bot,update,bot_db)
 
 def _ban(bot,update):
-    ban(bot,update,bot_db)
+    ban(bot,update,bot_db,error)
 
 
 def error(bot, update, error):
@@ -115,11 +126,23 @@ class OnjoinFilter(BaseFilter):
 
 
 def test(bot,update):
-    text= update.message.reply_to_message.new_chat_member
+    text= update.message.reply_to_message.left_chat_member
     print(text)
 
+def startup(bot_db,bot):
+    from db import bot_database
+    wl = bot_database.group_whitelist
+    bot_db = bot_database()
+
+    for group in wl:
+        if bot_db.getGroup(group).get('banlist') is not None :
+                print("online in "+str(group))
+                bot.sendMessage(group, text='Up and Running')
 
 def main():
+    bot = telegram.Bot(TOKEN)
+
+    startup(bot_db,bot)
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(TOKEN)
 
@@ -129,7 +152,7 @@ def main():
     OnJoin_filter = OnjoinFilter()
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("ping", pong))
-    #dp.add_handler(CommandHandler("test", test))
+    dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))
     dp.add_handler(CommandHandler("banlist", _banlist))
     dp.add_handler(CommandHandler("unban", _unban))
