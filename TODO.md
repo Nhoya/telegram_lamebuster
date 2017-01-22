@@ -4,4 +4,4 @@
 - [x] Multi-user management
 - [x] Multi-group management
 - [ ] Improve code quality
-- [ ] Implement DB
+- [x] Implement DB
