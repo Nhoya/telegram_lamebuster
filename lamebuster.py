@@ -39,6 +39,8 @@ def handler(bot,update):
     group_id = update.message.chat_id
     user_id = update.message.from_user.id
     user_name= update.message.from_user.username
+    if user_name  == "":
+        user_name = "N/D"
     text = update.message.text.encode('utf-8')
     timestamp = calendar.timegm(update.message.date.timetuple()) #datetime 2 timestamp
     _user = {'username':user_name,'id':user_id}
@@ -96,6 +98,7 @@ def handler(bot,update):
             user['counter'] = 0
         except (TelegramError, BadRequest) as e:
              bot.sendMessage(group_id, text="I need Administrator rights")
+             user['counter'] = 0
 
 
 def setfilter(bot,update):

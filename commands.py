@@ -91,6 +91,8 @@ def unban(bot,update,bot_db):
             message_body = update.message
             message_reply = message_body.reply_to_message
             user_name = message_reply.from_user.username
+            if user_name == "":
+                user_name = "N/D"
             user_id = message_reply.from_user.id
             user = bot_db.getUser(group_id,user_id)
             _user={'username':user_name,'id':user_id}
@@ -128,6 +130,9 @@ def ban(bot,update,bot_db, error):
             banlist = bot_db.getGroupBanlist(group_id)
             message_id = message_body.message_id
             user_name = message_reply.from_user.username
+            print(user_name)
+            if user_name == "":
+                user_name = 'N/D'
             user_id = message_reply.from_user.id
             _role = bot.getChatMember(update.message.chat_id, message_reply.from_user.id)
             if _role.status == "administrator" or _role.status == "creator":
