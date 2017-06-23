@@ -15,7 +15,7 @@ import sys
 from config import TOKEN
 from db import bot_database, GroupException, UserException
 from controls import _is_group, _is_admin, check_join
-from commands import setctrl, whitelist, pong, unban, banlist, ban
+from commands import setctrl, whitelist, pong, unban, banlist, ban, delete
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
 
@@ -26,6 +26,9 @@ max_messages = 5 # messages limit
 max_lease = 3.5 # seconds between successive messages
 pardon = 0.2
 bot_db = bot_database()
+
+def _delete(bot,update):
+    delete(bot,update)
 
 def handler(bot,update):
     if _is_admin(bot,update):
@@ -89,12 +92,12 @@ def handler(bot,update):
     #BAN MANAGEMENT
     if math.ceil(user['counter']) >= max_messages:
         #bot.kickChatMember(group_id,user_id)
-        banned={'username':user_name,'id':user_id}
-        if banned not in bot_db.getGroupBanlist(group_id):
-            bot_db.addBanned(group_id,banned)
-            bot.sendMessage(group_id, text='User removed ' + str(user_id) +" "+ user_name)
+        #banned={'username':user_name,'id':user_id}
+        #if banned not in bot_db.getGroupBanlist(group_id):
+        #    bot_db.addBanned(group_id,banned)
+        bot.sendMessage(group_id, text='User removed ' + str(user_id) +" "+ user_name)
         try:
-            bot.kickChatMember(group_id,user_id)
+            #bot.kickChatMember(group_id,user_id)
             user['counter'] = 0
         except (TelegramError, BadRequest) as e:
              bot.sendMessage(group_id, text="I need Administrator rights")
@@ -154,6 +157,7 @@ def main():
     dp = updater.dispatcher
     OnJoin_filter = OnjoinFilter()
     # on different commands - answer in Telegram
+    dp.add_handler(CommandHandler("rm", _delete))
     dp.add_handler(CommandHandler("ping", pong))
     dp.add_handler(CommandHandler("test", test))
     dp.add_handler(CommandHandler("whitelist", _whitelist, pass_args=True))

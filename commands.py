@@ -153,6 +153,15 @@ def ban(bot,update,bot_db, error):
         except (TelegramError, BadRequest) as e:
             bot.sendMessage(group_id, text="I need Administrator rights")
 
+def delete(bot,update):
+    if _is_admin(bot,update):
+        group_id = update.message.chat_id
+        fwdmessage_id = update.message.reply_to_message.message_id
+        message_id = update.message.message_id
+        bot.deleteMessage(group_id,message_id)
+        bot.deleteMessage(group_id,fwdmessage_id)
+
+
 
 #JUST FOR FUN
 def pong(bot, update):
