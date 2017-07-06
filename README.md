@@ -1,8 +1,8 @@
 #  Telegram lamebuster bot
 
-__**Actually this is a W.I.P. read the [TODO list](/TODO.md) for more info**__
+__**Actually this is a W.I.P.**__
 
-A simple python bot to get rid of annoying flooders in Telegram Groups
+Modular python bot get rid of annoying flooders in Telegram Groups
 
 ## Overview
 
@@ -26,8 +26,7 @@ lamebuster needs [python-telegram-bot](https://github.com/python-telegram-bot/py
 -`/ping`
 Print a `pong` message. Usefull to see if the bot is online and not busy
 
--`/whitelist [add | remove]`
-Will add or remove from whitelist  the user quoted by the message
+-`/ban` quoting an user
 
 -`/whitelist show`
 Print whitelist
